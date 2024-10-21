@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Billing App with Editable Products</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f3f3f3;
+        }
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 20px;
+        }
+        .product {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+            position: relative;
+        }
+        .product img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+        }
+        .product:hover {
+            transform: scale(1.05);
+        }
+        .edit-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px;
+            cursor: pointer;
+        }
+        .cart {
+            margin: 20px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+        }
+        .cart img {
+            width: 50px;
+            height: 50px;
+        }
+        .pay-button {
+            margin: 20px;
+            padding: 15px;
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .progress-bar {
+            width: 100%;
+            max-width: 300px;
+            background: #ccc;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 10px;
+        }
+        .progress {
+            height: 20px;
+            background: #4caf50;
+            width: 0;
+        }
+        .add-product-form, .edit-product-form {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px;
+            width: 300px;
+            text-align: center;
+        }
+        .add-product-form input, .edit-product-form input {
+            margin: 5px 0;
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .add-product-form button, .edit-product-form button {
+            margin-top: 10px;
+            padding: 10px;
+            width: 100%;
+            background: #4caf50;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .edit-product-form {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Billing App with Editable Products</h1>
+
+    <div class="add-product-form">
+        <h2>Add a New Product</h2>
+        <input type="text" id="new-product-name" placeholder="Product Name">
+        <input type="number" id="new-product-price" placeholder="Price" min="1">
+        <input type="file" id="new-product-image" accept="image/*">
+        <button onclick="addNewProduct()">Add Product</button>
+    </div>
+
+    <div class="edit-product-form" id="edit-product-form">
+        <h2>Edit Product</h2>
+        <input type="text" id="edit-product-name" placeholder="Product Name">
+        <input type="number" id="edit-product-price" placeholder="Price" min="1">
+        <input type="file" id="edit-product-image" accept="image/*">
+        <button onclick="saveProductChanges()">Save Changes</button>
+        <button onclick="cancelEdit()">Cancel</button>
+    </div>
+
+    <div class="product-grid" id="product-grid">
+        <div class="product" onclick="addItem('Apple', 1)">
+            <img src="https://via.placeholder.com/100?text=Apple" alt="Apple" />
+            <p>Apple</p>
+            <p>1 coin</p>
+            <button class="edit-button" onclick="editProduct(event, 'Apple', 1, 'https://via.placeholder.com/100?text=Apple')">Edit</button>
+        </div>
+        <div class="product" onclick="addItem('Banana', 2)">
+            <img src="https://via.placeholder.com/100?text=Banana" alt="Banana" />
+            <p>Banana</p>
+            <p>2 coins</p>
+            <button class="edit-button" onclick="editProduct(event, 'Banana', 2, 'https://via.placeholder.com/100?text=Banana')">Edit</button>
+        </div>
+        <div class="product" onclick="addItem('Chocolate', 5)">
+            <img src="https://via.placeholder.com/100?text=Chocolate" alt="Chocolate" />
+            <p>Chocolate</p>
+            <p>5 coins</p>
+            <button class="edit-button" onclick="editProduct(event, 'Chocolate', 5, 'https://via.placeholder.com/100?text=Chocolate')">Edit</button>
+        </div>
+    </div>
+
+    <div class="cart">
+        <h2>Cart</h2>
+        <div id="cart-items"></div>
+        <p>Total: <span id="total">0</span> coins</p>
+        <button class="pay-button" onclick="processPayment()">Pay Now</button>
+    </div>
+
+    <div class="progress-bar">
+        <div class="progress" id="progress"></div>
+    </div>
+
+    <script>
+        const cart = [];
+        let total = 0;
+        let currentEditProduct = null;
+
+        function addItem(item, price) {
+            cart.push({ item, price });
+            total += price;
+            updateCartDisplay();
+            updateProgress(total);
+            speak(item + ' added to the cart.');
+        }
+
+        function updateCartDisplay() {
+            const cartItemsDiv = document.getElementById('cart-items');
+            cartItemsDiv.innerHTML = cart.map(entry => 
+                <div>${entry.item} - ${entry.price} coins</div>
+            ).join('');
+            document.getElementById('total').innerText = total;
+        }
+
+        function processPayment() {
+            if (total > 0) {
+                speak('Payment successful! Total paid: ' + total + ' coins.');
+                total = 0;
+                cart.length = 0;
+                updateCartDisplay();
+                updateProgress(0);
+            } else {
+                speak('Your cart is empty.');
+            }
+        }
+
+        function updateProgress(value) {
+            const max = 100;
+            const progressPercentage = (value / max) * 100;
+            document.getElementById('progress').style.width = Math.min(progressPercentage, 100) + '%';
+        }
+
+        function speak(text) {
+            const speech = new SpeechSynthesisUtterance(text);
+            window.speechSynthesis.speak(speech);
+        }
+
+        function addNewProduct() {
+            const name = document.getElementById('new-product-name').value;
+            const price = document.getElementById('new-product-price').value;
+            const imageInput = document.getElementById('new-product-image');
+
+            if (!name || !price || !imageInput.files.length) {
+                speak('Please fill out all fields and select an image.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const imageSrc = event.target.result;
+                const productGrid = document.getElementById('product-grid');
+
+                const newProductDiv = document.createElement('div');
+                newProductDiv.className = 'product';
+                newProductDiv.innerHTML = `
+                    <img src="${imageSrc}" alt="${name}">
+                    <p>${name}</p>
+                    <p>${price} coins</p>
+                    <button class="edit-button" onclick="editProduct(event, '${name}', ${price}, '${imageSrc}')">Edit</button>
+                `;
+                newProductDiv.onclick = function() {
+                    addItem(name, parseInt(price));
+                };
+
+                productGrid.appendChild(newProductDiv);
+                speak(name + ' added to the product list.');
+            };
+            reader.readAsDataURL(imageInput.files[0]);
+
+            document.getElementById('new-product-name').value = '';
+            document.getElementById('new-product-price').value = '';
+            document.getElementById('new-product-image').value = '';
+        }
+
+        function editProduct(event, name, price, imageSrc) {
+            event.stopPropagation();
+
+            currentEditProduct = event.target.closest('.product');
+            document.getElementById('edit-product-name').value = name;
+            document.getElementById('edit-product-price').value = price;
+            document.getElementById('edit-product-image').value = '';
+            document.getElementById('edit-product-form').style.display = 'block';
+        }
+
+        function saveProductChanges() {
+            if (!currentEditProduct) return;
+
+            const name = document.getElementById('edit-product-name').value;
+            const price = document.getElementById('edit-product-price').value;
+            const imageInput = document.getElementById('edit-product-image');
+
+            if (!name || !price) {
+                speak('Please fill out all fields.');
+                return;
+            }
+
+            const imgElement = currentEditProduct.querySelector('img');
+            const nameElement = currentEditProduct.querySelector('p:first-of-type');
+            const priceElement = currentEditProduct.querySelector('p:last-of-type');
+
+            if (imageInput.files.length > 0) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    imgElement.src = event.target.result;
+                    imgElement.alt = name;
+                };
+                reader.readAsDataURL(imageInput.files[0]);
+            }
+
+            nameElement.textContent = name;
+            priceElement.textContent = ${price} coins;
+
+            currentEditProduct.onclick = function() {
+                addItem(name, parseInt(price));
+            };
+            currentEditProduct.querySelector('.edit-button').onclick = function(event) {
+                editProduct(event, name, price, imgElement.src);
+            };
+
+            document.getElementById('edit-product-form').style.display = 'none';
+            currentEditProduct = null;
+            speak(name + ' updated successfully.');
+        }
+
+        function cancelEdit() {
+            document.getElementById('edit-product-form').style.display = 'none';
+            currentEditProduct = null;
+        }
+    </script>
+</body>
+</html>
